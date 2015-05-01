@@ -1,0 +1,6 @@
+.project
+.DS_Store
+*~
+.settings/
+Debug/
+Release/
