@@ -21,4 +21,4 @@ therefore broken down our documentation into separate READMEs for each:
 platform, such as the Arduino Uno device.
 
 1. [TI CC3200](docs/CC3200.md) - Using this library with the TI CC3200
-Laundpad.
+Launchpad.
