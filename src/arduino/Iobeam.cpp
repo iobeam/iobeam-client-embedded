@@ -169,8 +169,9 @@ int Iobeam::registerDevice(unsigned int memoryOffset)
 
 // Common function for the two types of sending/import requests.
 bool Iobeam::sendFormat(const char *fmt, ...) {
-    if (!connect())
+    if (!connect()) {
         return false;
+    }
 
     va_list args;
     va_start(args, fmt);
@@ -311,6 +312,9 @@ bool Iobeam::processResponse(int code, char *bodyPtr, uint32_t *bodyLen)
     correctCode = returnCode == code;
     if (!correctCode) {
         mClient.stop();
+        IOBEAM_VERBOSE("Wrong code received: ");
+        IOBEAM_VERBOSE(returnCode);
+        IOBEAM_VERBOSE("\n");
         return false;
     }
 

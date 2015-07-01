@@ -14,12 +14,13 @@
 #include <EEPROM.h>
 #include <Ethernet.h>
 
+#define API_DEFAULT_SERVER "api.iobeam.com"
 #define DEBUG_LEVEL 2
 #include <Iobeam.h>
 
 // Necessary for iobeam. The project token should be PROGMEM to save RAM.
-#define PROJECT_ID YOUR_PROJECT_ID
-PROGMEM const char token[] = {"YOUR_PROJECT_TOKEN"};
+#define PROJECT_ID -1  // YOUR PROJECT ID
+PROGMEM const char token[] = {"YOUR PROJECT TOKEN HERE"};
 
 // Initialize the network and iobeam libraries.
 byte mac[] = { 0x90, 0xA2, 0xDA, 0x0F, 0x9B, 0xFA };  // ethernet MAC address
@@ -27,7 +28,7 @@ EthernetClient client;
 Iobeam iobeam(client);
 
 void setup() {
-  setupSerial();  
+  setupSerial();
   setupNetwork();
   
   // iobeam initialization

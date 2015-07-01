@@ -8,7 +8,9 @@
 #define __STDC_LIMIT_MACROS
 #include <inttypes.h>
 
-#define API_DEFAULT_SERVER "api-dev.iobeam.com"
+#ifndef API_DEFAULT_SERVER
+#define API_DEFAULT_SERVER "api.iobeam.com"
+#endif
 
 #ifndef DEBUG_LEVEL
 #define DEBUG_LEVEL 0

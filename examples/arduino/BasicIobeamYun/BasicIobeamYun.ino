@@ -9,25 +9,26 @@
  * the iobeam cloud every 15 seconds. For real projects, you would replace
  * this logic with code to measure whatever values you are concerned with.
  */
-
 #define __STDC_LIMIT_MACROS
+
 #include <SPI.h>
 #include <EEPROM.h>
 #include <YunClient.h>
 
+#define API_DEFAULT_SERVER "api.iobeam.com"
 #define DEBUG_LEVEL 2
 #include <Iobeam.h>
 
 // Necessary for iobeam. The project token should be PROGMEM to save RAM.
-#define PROJECT_ID YOUR_PROJECT_ID
-PROGMEM const char token[] = {"YOUR_PROJECT_TOKEN"};
+#define PROJECT_ID -1  // YOUR PROJECT ID
+PROGMEM const char token[] = {"YOUR PROJECT TOKEN HERE"};
 
 // Initialize the network and iobeam libraries.
 YunClient client;
 Iobeam iobeam(client);
 
 void setup() {
-  setupSerial();  
+  setupSerial();
   setupNetwork();
   
   // iobeam initialization
