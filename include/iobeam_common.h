@@ -114,17 +114,19 @@ static inline void _iobeam_generic_WriteCommonHeaders(void *obj, void *func,
 static void _iobeam_generic_WriteContentLengthHeader(void *obj, void *func,
         char *dst, size_t dstLen, uint32_t len)
 {
+	const char *fmt = "%" PRIu32 HEADER_END;
     _iobeam_generic_WriteFormattedHeader(obj, func, dst, dstLen,
             HTTP_HEADER_CONTENT_LENGTH, sizeof(HTTP_HEADER_CONTENT_LENGTH),
-            "%" PRIu32 HEADER_END, len);
+            fmt, len);
 }
 
 static void _iobeam_generic_WriteTokenHeader(void *obj, void *func, char *dst,
     size_t dstLen, const char *token)
 {
+	const char *fmt = "Bearer %s" HEADER_END;
     _iobeam_generic_WriteFormattedHeader(obj, func, dst, dstLen,
             HTTP_HEADER_TOKEN, sizeof(HTTP_HEADER_TOKEN),
-            "Bearer %s" HEADER_END, token);
+            fmt, token);
 }
 
 static void _iobeam_generic_EndHeaders(void *obj, void *func)
