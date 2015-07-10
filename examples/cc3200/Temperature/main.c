@@ -16,6 +16,7 @@
 #include <string.h>
 #include <stdint.h>
 
+// Includes to setup board
 #include "i2c_if.h"
 #include "pinmux.h"
 #include "tmp006drv.h"
@@ -23,36 +24,23 @@
 #include "udma_if.h"
 #include "wifi.h"
 
+// iobeam includes
+#define API_DEFAULT_SERVER "api.iobeam.com"
 #define DEBUG_LEVEL 2
 #include "include/iobeam_log.h"
 #include "include/cc3200/iobeam.h"
+//#define NEW_ID 1  // Uncomment to get a new device ID.
 
 
-#define APPLICATION_NAME        "iobeam test"
-#define APPLICATION_VERSION     "0.1"
+#define APPLICATION_NAME        "iobeam temperature tracker"
+#define APPLICATION_VERSION     "1.0.0"
+#define MEASURE_DELAY_SECS       5
 
-const char *PROJECT_TOKEN = YOUR_PROJECT_TOKEN;
-const uint32_t PROJECT_ID = YOUR_PROJECT_ID;
+// iobeam constants
+const char *PROJECT_TOKEN = "YOUR PROJECT TOKEN";
+const uint32_t PROJECT_ID = 0;  // YOUR PROJECT ID
 const char *DEVICE_ID = NULL;
 
-//*****************************************************************************
-//
-//! Application startup display on UART
-//!
-//! \param  none
-//!
-//! \return none
-//!
-//*****************************************************************************
-static void DisplayBanner(char * AppName)
-{
-
-    Report("\n\n\n\r");
-    Report("\t\t *************************************************\n\r");
-    Report("\t\t      CC3200 %s Application       \n\r", AppName);
-    Report("\t\t *************************************************\n\r");
-    Report("\n\n\n\r");
-}
 
 static void Init()
 {
@@ -62,10 +50,6 @@ static void Init()
     PinMuxConfig();
     InitTerm();
 
-    //
-    // Display banner
-    //
-    DisplayBanner(APPLICATION_NAME);
     InitializeAppVariables();
 
     //
@@ -101,7 +85,7 @@ static void Init()
         ;
     }
 
-    UART_PRINT("Connecting to AP: %s ...\r\n", SSID_NAME);
+    UART_PRINT("Connecting to AP: '%s'...\r\n", SSID_NAME);
 
     // Connecting to WLAN AP - Set with static parameters defined at common.h
     // After this call we will be connected and have IP address
@@ -112,8 +96,11 @@ static void Init()
         ;
     }
 
-    UART_PRINT("Connected to AP: %s \n\r", SSID_NAME);
+    UART_PRINT("Connected to AP: '%s' \n\r", SSID_NAME);
 
+#ifdef NEW_ID
+    iobeam_Reset();
+#endif
 }
 
 inline int initTemperatureSensor() {
@@ -132,10 +119,10 @@ inline int getTemperature(float *temperature)
 
 // UtilsDelay uses loop counts which takes 3-5 CPU ticks on 80Mhz, this macro
 // is a rough conversion from seconds.
-#define SECS_TO_LOOPS(x) ((80000000/5)*x)
+#define SECS_TO_LOOPS(x) ((80000000 / 5) * x)
 
 inline void delay(uint16_t seconds) {
-    MAP_UtilsDelay(SECS_TO_LOOPS(seconds));
+    UtilsDelay(SECS_TO_LOOPS(seconds));
 }
 
 //****************************************************************************
@@ -147,8 +134,14 @@ void main()
 
     int ret = initTemperatureSensor();
     if (ret == 0) {  // 0 is success
+        IOBEAM_LOG("Temperature sensor initialized.\r\n");
+
         Iobeam iobeam;
-        iobeam_Init(&iobeam, PROJECT_ID, PROJECT_TOKEN, DEVICE_ID);
+        ret = iobeam_Init(&iobeam, PROJECT_ID, PROJECT_TOKEN, DEVICE_ID);
+        if (ret < 0) {
+            IOBEAM_ERR("iobeam init failed, quitting...\r\n");
+            goto err_iobeam;
+        }
         iobeam.RegisterDevice();
         iobeam.StartTimeKeeping();
 
@@ -160,16 +153,17 @@ void main()
                 IOBEAM_ERR("Error getting temp: %d\r\n", ret);
                 break;
             }
-            IOBEAM_LOG("t: %f\r\n", temperature);
+            IOBEAM_LOG("temperature: %f\r\n", temperature);
             ret = iobeam.SendFloat("temperature", temperature);
             IOBEAM_LOG("success: %d\r\n", ret);
 
-            delay(5);
+            delay(MEASURE_DELAY_SECS);
         }
 
         iobeam_Finish();
     }
 
+err_iobeam:
     sl_Stop(SL_STOP_TIMEOUT);
 
     IOBEAM_LOG("Exiting Application ...\n\r");

@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define API_DEFAULT_SERVER  "api-dev.iobeam.com"
+#ifndef API_DEFAULT_SERVER
+#define API_DEFAULT_SERVER  "api.iobeam.com"
+#endif
 #include "../iobeam_common.h"
 
 #include "simplelink.h"
@@ -28,7 +30,7 @@ typedef struct _iobeam {
     int (*SendFloatWithTime)(const char *key, uint64_t ts, double val);
 } Iobeam;
 
-void iobeam_Init(Iobeam *i, uint32_t projId, const char *projToken,
+int iobeam_Init(Iobeam *i, uint32_t projId, const char *projToken,
         const char *deviceId);
 static int _iobeam_StartTimeKeeping();
 static int _iobeam_IsRegistered();
@@ -40,6 +42,9 @@ static int _iobeam_SendInt(const char *key, int64_t value);
 static int _iobeam_SendIntWithTime(const char *key, uint64_t timestamp,
         int64_t value);
 void iobeam_Finish();
+static void iobeam_Reset() {
+    sl_FsDel(IOBEAM_DEVICE_FILE, 0);
+}
 
 static uint64_t _iobeam_ParseServerTime(const char *getTimeRsp)
 {

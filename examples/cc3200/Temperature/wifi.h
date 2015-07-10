@@ -18,9 +18,18 @@
 
 // common interface includes 
 #include "common.h"
+#undef SSID_NAME
+#undef SECURITY_TYPE
+#undef SECURITY_KEY
 #ifndef NOTERM
 #include "uart_if.h"
 #endif
+
+
+// Wireless credentials
+#define SSID_NAME           "YOUR WIFI SSID"    /* AP SSID */
+#define SECURITY_TYPE       SL_SEC_TYPE_WPA   /* Security type (OPEN or WEP or WPA*/
+#define SECURITY_KEY        "YOUR WIFI PASSWORD"      /* Password of the secured AP */
 
 
 #define DEVICE_NOT_IN_STATION_MODE -0x100
@@ -29,7 +38,6 @@
 //                      LOCAL FUNCTION PROTOTYPES
 //****************************************************************************
 static long WlanConnect();
-static void DisplayBanner();
 static void BoardInit();
 static void InitializeAppVariables();
 
@@ -39,7 +47,6 @@ static void InitializeAppVariables();
 //*****************************************************************************
 volatile unsigned long  g_ulStatus = 0;//SimpleLink Status
 unsigned char  g_ucConnectionSSID[SSID_LEN_MAX+1]; //Connection SSID
-unsigned char  g_ucConnectionBSSID[BSSID_LEN_MAX]; //Connection BSSID
 unsigned char  g_ucSimplelinkstarted = 0;
 
 #if defined(ccs) || defined (gcc)
@@ -90,20 +97,13 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
             // pEventData = &pWlanEvent->EventData.STAandP2PModeWlanConnected;
             //
 
-            // Copy new connection SSID and BSSID to global parameters
+            // Copy new connection SSID to global parameter
             memcpy(g_ucConnectionSSID,pWlanEvent->EventData.
                    STAandP2PModeWlanConnected.ssid_name,
                    pWlanEvent->EventData.STAandP2PModeWlanConnected.ssid_len);
-            memcpy(g_ucConnectionBSSID,
-                   pWlanEvent->EventData.STAandP2PModeWlanConnected.bssid,
-                   SL_BSSID_LENGTH);
 
-            UART_PRINT("[WLAN EVENT] STA Connected to the AP: %s ,"
-                        " BSSID: %x:%x:%x:%x:%x:%x\n\r",
-                      g_ucConnectionSSID,g_ucConnectionBSSID[0],
-                      g_ucConnectionBSSID[1],g_ucConnectionBSSID[2],
-                      g_ucConnectionBSSID[3],g_ucConnectionBSSID[4],
-                      g_ucConnectionBSSID[5]);
+            UART_PRINT("[WLAN EVENT] Connected to the AP: '%s'\r\n",
+                      g_ucConnectionSSID);
         }
         break;
 
@@ -118,26 +118,18 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *pWlanEvent)
 
             // If the user has initiated 'Disconnect' request,
             //'reason_code' is SL_USER_INITIATED_DISCONNECTION
-            if(SL_USER_INITIATED_DISCONNECTION == pEventData->reason_code)
+            if (SL_USER_INITIATED_DISCONNECTION == pEventData->reason_code)
             {
-                UART_PRINT("[WLAN EVENT]Device disconnected from the AP: %s,"
-                "BSSID: %x:%x:%x:%x:%x:%x on application's request \n\r",
-                           g_ucConnectionSSID,g_ucConnectionBSSID[0],
-                           g_ucConnectionBSSID[1],g_ucConnectionBSSID[2],
-                           g_ucConnectionBSSID[3],g_ucConnectionBSSID[4],
-                           g_ucConnectionBSSID[5]);
+                UART_PRINT("[WLAN EVENT] Device disconnected from AP: %s,"
+                        "by request.\r\n", g_ucConnectionSSID);
             }
             else
             {
-                UART_PRINT("[WLAN ERROR]Device disconnected from the AP AP: %s,"
-                            "BSSID: %x:%x:%x:%x:%x:%x on an ERROR..!! \n\r",
-                           g_ucConnectionSSID,g_ucConnectionBSSID[0],
-                           g_ucConnectionBSSID[1],g_ucConnectionBSSID[2],
-                           g_ucConnectionBSSID[3],g_ucConnectionBSSID[4],
-                           g_ucConnectionBSSID[5]);
+                UART_PRINT("[WLAN ERROR] Device disconnected from AP: %s,"
+                            "unexpectedly...\n\r", g_ucConnectionSSID);
+                //WlanConnect();
             }
-            memset(g_ucConnectionSSID,0,sizeof(g_ucConnectionSSID));
-            memset(g_ucConnectionBSSID,0,sizeof(g_ucConnectionBSSID));
+            memset(g_ucConnectionSSID, 0, sizeof(g_ucConnectionSSID));
         }
         break;
 
@@ -179,9 +171,6 @@ void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *pNetAppEvent)
             //Ip Acquired Event Data
             pEventData = &pNetAppEvent->EventData.ipAcquiredV4;
             myIp = pEventData->ip;
-
-            //Gateway IP address
-            //g_ulGatewayIP = pEventData->gateway;
 
             UART_PRINT("[NETAPP EVENT] IP Acquired: IP=%d.%d.%d.%d\r\n",
                             SL_IPV4_BYTE(myIp, 3),
@@ -308,7 +297,6 @@ static void InitializeAppVariables()
 {
     g_ulStatus = 0;
     memset(g_ucConnectionSSID,0,sizeof(g_ucConnectionSSID));
-    memset(g_ucConnectionBSSID,0,sizeof(g_ucConnectionBSSID));
 }
 
 //*****************************************************************************
@@ -476,15 +464,32 @@ static long ConfigureSimpleLinkToDefaultState()
 //****************************************************************************
 static long WlanConnect()
 {
+    unsigned char policyVal;
     SlSecParams_t secParams = {0};
     long lRetVal = 0;
 
-    secParams.Key = (signed char*)SECURITY_KEY;
+    secParams.Key = (signed char*) SECURITY_KEY;
     secParams.KeyLen = strlen(SECURITY_KEY);
     secParams.Type = SECURITY_TYPE;
 
-    lRetVal = sl_WlanConnect((signed char*)SSID_NAME, strlen(SSID_NAME), 0, &secParams, 0);
+    // Reset profile and policy.
+    sl_WlanProfileDel(0xFF);
+    sl_WlanPolicySet(SL_POLICY_CONNECTION, SL_CONNECTION_POLICY(0, 0, 0, 0, 0),
+            0, 0);
+
+    //Add Profile
+    lRetVal = sl_WlanProfileAdd(SSID_NAME, strlen(SSID_NAME), 0, &secParams,
+            0, 1, 0);
     ASSERT_ON_ERROR(lRetVal);
+
+    // Set auto-reconnect policy with SmartConfig.
+    lRetVal = sl_WlanPolicySet(SL_POLICY_CONNECTION,
+            SL_CONNECTION_POLICY(1, 1, 0, 0, 1), &policyVal, 1);
+    ASSERT_ON_ERROR(lRetVal);
+
+    /*lRetVal = sl_WlanConnect((signed char*) SSID_NAME, strlen(SSID_NAME), 0,
+            &secParams, 0);
+    ASSERT_ON_ERROR(lRetVal);*/
 
     /* Wait */
     while((!IS_CONNECTED(g_ulStatus)) || (!IS_IP_ACQUIRED(g_ulStatus)))

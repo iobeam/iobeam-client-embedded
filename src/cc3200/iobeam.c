@@ -4,7 +4,7 @@
 #endif
 #include "systick.h"
 
-#define DEBUG_LEVEL 2
+#define DEBUG_LEVEL 0
 #include "../../include/cc3200/iobeam.h"
 #include "../../include/iobeam_log.h"
 
@@ -31,9 +31,14 @@ static uint64_t getMillis()
     return _millis;
 }
 
-void iobeam_Init(Iobeam *i, uint32_t projId, const char *projToken,
+int iobeam_Init(Iobeam *i, uint32_t projId, const char *projToken,
         const char *deviceId)
 {
+    if (projId <= 0)
+        return -1;
+    if (projToken == NULL)
+        return -1;
+
     _projectId = projId;
     if (deviceId) {
         size_t len = strlen(deviceId);
@@ -57,6 +62,8 @@ void iobeam_Init(Iobeam *i, uint32_t projId, const char *projToken,
     i->SendIntWithTime = _iobeam_SendIntWithTime;
     i->SendFloat = _iobeam_SendFloat;
     i->SendFloatWithTime = _iobeam_SendFloatWithTime;
+
+    return 0;
 }
 
 static int _iobeam_IsRegistered()
@@ -344,6 +351,8 @@ static int _iobeam_GetSocket()
     if (_apiIp == 0) {
         err = sl_NetAppDnsGetHostByName(API_DEFAULT_SERVER,
                 sizeof(API_DEFAULT_SERVER), &_apiIp, SL_AF_INET);
+        if (err < 0)
+            return -1;
     }
 
     //filling the TCP server socket address
