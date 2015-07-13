@@ -16,12 +16,12 @@
 #include <YunClient.h>
 
 #define API_DEFAULT_SERVER "api.iobeam.com"
-#define DEBUG_LEVEL 2
+#define DEBUG_LEVEL 0
 #include <Iobeam.h>
 
 // Necessary for iobeam. The project token should be PROGMEM to save RAM.
 #define PROJECT_ID -1  // YOUR PROJECT ID
-PROGMEM const char token[] = {"YOUR PROJECT TOKEN HERE"};
+PROGMEM const char token[] = {"YOUR PROJECT TOKEN"};
 
 // Initialize the network and iobeam libraries.
 YunClient client;
@@ -62,10 +62,23 @@ void setupSerial() {
 
 void setupNetwork() {
   Bridge.begin();
+  int tries = 0;
+  while (1) {
+    int ret = client.connect("iobeam.com", 80);
+    client.stop();
+    if (ret > 0)
+      break;
+    delay(1000);
+    IOBEAM_ERR("Failed to connect, retry...\n");
+    tries++;
+    if (tries > 30)
+      break;
+  }
   delay(1000);  // give Client a moment to init  
 }
 
 void errorForever() {
+  IOBEAM_ERR("Error, looping forever.\n");
   while(1);
 }
 
