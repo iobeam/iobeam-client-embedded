@@ -1,12 +1,12 @@
 #ifndef Iobeam_h
 #define Iobeam_h
 
+#define __STDC_LIMIT_MACROS
+#include <inttypes.h>
+
 #include <Arduino.h>
 #include <avr/pgmspace.h>
 #include <Client.h>
-
-#define __STDC_LIMIT_MACROS
-#include <inttypes.h>
 
 #ifndef API_DEFAULT_SERVER
 #define API_DEFAULT_SERVER "api.iobeam.com"

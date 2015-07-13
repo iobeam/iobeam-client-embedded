@@ -1,7 +1,8 @@
+#include "../../include/arduino/Iobeam.hpp"
+
 #include <SPI.h>
 #include <EEPROM.h>
 #include <math.h>
-#include "include/arduino/Iobeam.hpp"
 
 Iobeam::Iobeam(Client& client) : mClient(client) { }
 

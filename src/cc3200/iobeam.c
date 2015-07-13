@@ -1,7 +1,10 @@
+#ifndef ARDUINO
 #include "common.h"
+
 #ifndef NOTERM
 #include "uart_if.h"
 #endif
+
 #include "systick.h"
 
 #define DEBUG_LEVEL 0
@@ -399,3 +402,4 @@ void iobeam_Finish()
     SysTickIntUnregister();
     memset(_deviceId, '\0', sizeof(_deviceId));
 }
+#endif /* #ifndef ARDUINO */
